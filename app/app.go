@@ -12,6 +12,7 @@ import (
 	"github.com/bepass-org/warp-plus/iputils"
 	"github.com/bepass-org/warp-plus/psiphon"
 	"github.com/bepass-org/warp-plus/warp"
+	"github.com/bepass-org/warp-plus/wireguard/preflightbind"
 	"github.com/bepass-org/warp-plus/wireguard/tun"
 	"github.com/bepass-org/warp-plus/wireguard/tun/netstack"
 	"github.com/bepass-org/warp-plus/wiresocks"
@@ -33,6 +34,7 @@ type WarpOptions struct {
 	WireguardConfig string
 	Reserved        string
 	TestURL         string
+	AmneziaConfig   *preflightbind.AmneziaConfig
 }
 
 type PsiphonOptions struct {
@@ -119,7 +121,10 @@ func runWireguard(ctx context.Context, l *slog.Logger, opts WarpOptions) error {
 
 	// Enable trick and keepalive on all peers in config
 	for i, peer := range conf.Peers {
-		peer.Trick = true
+		// Only enable old trick functionality if Amnezia is not being used
+		if opts.AmneziaConfig == nil {
+			peer.Trick = true
+		}
 		peer.KeepAlive = 5
 
 		// Try resolving if the endpoint is a domain
@@ -142,7 +147,7 @@ func runWireguard(ctx context.Context, l *slog.Logger, opts WarpOptions) error {
 			continue
 		}
 
-		werr = establishWireguard(l, conf, tunDev, opts.FwMark, t)
+		werr = establishWireguard(l, conf, tunDev, opts.FwMark, t, opts.AmneziaConfig)
 		if werr != nil {
 			continue
 		}
@@ -159,12 +164,12 @@ func runWireguard(ctx context.Context, l *slog.Logger, opts WarpOptions) error {
 	}
 
 	// Run a proxy on the userspace stack
-	_, err = wiresocks.StartProxy(ctx, l, tnet, opts.Bind)
+	actualBind, err := wiresocks.StartProxy(ctx, l, tnet, opts.Bind)
 	if err != nil {
 		return err
 	}
 
-	l.Info("serving proxy", "address", opts.Bind)
+	l.Info("serving proxy", "address", actualBind)
 
 	return nil
 }
@@ -187,7 +192,10 @@ func runWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoint str
 	// Enable trick and keepalive on all peers in config
 	for i, peer := range conf.Peers {
 		peer.Endpoint = endpoint
-		peer.Trick = true
+		// Only enable old trick functionality if Amnezia is not being used
+		if opts.AmneziaConfig == nil {
+			peer.Trick = true
+		}
 		peer.KeepAlive = 5
 
 		if opts.Reserved != "" {
@@ -211,7 +219,7 @@ func runWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoint str
 			continue
 		}
 
-		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t)
+		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t, opts.AmneziaConfig)
 		if werr != nil {
 			continue
 		}
@@ -228,12 +236,12 @@ func runWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoint str
 	}
 
 	// Run a proxy on the userspace stack
-	_, err = wiresocks.StartProxy(ctx, l, tnet, opts.Bind)
+	actualBind, err := wiresocks.StartProxy(ctx, l, tnet, opts.Bind)
 	if err != nil {
 		return err
 	}
 
-	l.Info("serving proxy", "address", opts.Bind)
+	l.Info("serving proxy", "address", actualBind)
 	return nil
 }
 
@@ -255,7 +263,10 @@ func runWarpInWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoi
 	// Enable trick and keepalive on all peers in config
 	for i, peer := range conf.Peers {
 		peer.Endpoint = endpoints[0]
-		peer.Trick = true
+		// Only enable old trick functionality if Amnezia is not being used
+		if opts.AmneziaConfig == nil {
+			peer.Trick = true
+		}
 		peer.KeepAlive = 5
 
 		if opts.Reserved != "" {
@@ -280,7 +291,7 @@ func runWarpInWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoi
 			continue
 		}
 
-		werr = establishWireguard(l.With("gool", "outer"), &conf, tunDev, opts.FwMark, t)
+		werr = establishWireguard(l.With("gool", "outer"), &conf, tunDev, opts.FwMark, t, opts.AmneziaConfig)
 		if werr != nil {
 			continue
 		}
@@ -339,7 +350,7 @@ func runWarpInWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoi
 	}
 
 	// Establish wireguard on userspace stack
-	if err := establishWireguard(l.With("gool", "inner"), &conf, tunDev, opts.FwMark, "t0"); err != nil {
+	if err := establishWireguard(l.With("gool", "inner"), &conf, tunDev, opts.FwMark, "t0", nil); err != nil {
 		return err
 	}
 
@@ -348,12 +359,12 @@ func runWarpInWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoi
 		return err
 	}
 
-	_, err = wiresocks.StartProxy(ctx, l, tnet2, opts.Bind)
+	actualBind, err := wiresocks.StartProxy(ctx, l, tnet2, opts.Bind)
 	if err != nil {
 		return err
 	}
 
-	l.Info("serving proxy", "address", opts.Bind)
+	l.Info("serving proxy", "address", actualBind)
 	return nil
 }
 
@@ -375,7 +386,10 @@ func runWarpWithPsiphon(ctx context.Context, l *slog.Logger, opts WarpOptions, e
 	// Enable trick and keepalive on all peers in config
 	for i, peer := range conf.Peers {
 		peer.Endpoint = endpoint
-		peer.Trick = true
+		// Only enable old trick functionality if Amnezia is not being used
+		if opts.AmneziaConfig == nil {
+			peer.Trick = true
+		}
 		peer.KeepAlive = 5
 
 		if opts.Reserved != "" {
@@ -400,7 +414,7 @@ func runWarpWithPsiphon(ctx context.Context, l *slog.Logger, opts WarpOptions, e
 			continue
 		}
 
-		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t)
+		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t, opts.AmneziaConfig)
 		if werr != nil {
 			continue
 		}

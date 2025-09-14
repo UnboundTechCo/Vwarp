@@ -6,46 +6,41 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bepass-org/warp-plus/wireguard/conn"
 	"github.com/bepass-org/warp-plus/wireguard/device"
+	"github.com/bepass-org/warp-plus/wireguard/preflightbind"
 	wgtun "github.com/bepass-org/warp-plus/wireguard/tun"
 	"github.com/bepass-org/warp-plus/wireguard/tun/netstack"
 	"github.com/bepass-org/warp-plus/wiresocks"
 )
 
 func usermodeTunTest(ctx context.Context, l *slog.Logger, tnet *netstack.Net, url string) error {
-	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(5*time.Second))
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		client := http.Client{Transport: &http.Transport{
-			DialContext:           tnet.DialContext,
-			ResponseHeaderTimeout: 5 * time.Second,
-		}}
-		resp, err := client.Head(url)
-		if err != nil {
-			l.Error("connection test failed")
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			l.Error("connection test failed")
-			continue
-		}
-
-		l.Info("connection test successful")
-		break
+	// Wait a bit after handshake to ensure connection is stable
+	time.Sleep(2 * time.Second)
+	
+	l.Info("testing connectivity", "url", url)
+	
+	client := http.Client{
+		Timeout: 15 * time.Second,
+		Transport: &http.Transport{
+			DialContext: tnet.DialContext,
+		},
 	}
 
+	resp, err := client.Get(url)
+	if err != nil {
+		l.Error("connectivity test failed", "error", err, "url", url)
+		return err
+	}
+	defer resp.Body.Close()
+
+	l.Info("connectivity test completed successfully", "status", resp.StatusCode, "url", url)
 	return nil
 }
 
@@ -91,7 +86,7 @@ func waitHandshake(ctx context.Context, l *slog.Logger, dev *device.Device) erro
 	return nil
 }
 
-func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wgtun.Device, fwmark uint32, t string) error {
+func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wgtun.Device, fwmark uint32, t string, amneziaConfig *preflightbind.AmneziaConfig) error {
 	// create the IPC message to establish the wireguard conn
 	var request bytes.Buffer
 
@@ -105,7 +100,15 @@ func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wg
 		request.WriteString(fmt.Sprintf("persistent_keepalive_interval=%d\n", peer.KeepAlive))
 		request.WriteString(fmt.Sprintf("preshared_key=%s\n", peer.PreSharedKey))
 		request.WriteString(fmt.Sprintf("endpoint=%s\n", peer.Endpoint))
-		request.WriteString(fmt.Sprintf("trick=%s\n", t))
+		
+		// Only set trick if Amnezia is not being used
+		if amneziaConfig == nil {
+			request.WriteString(fmt.Sprintf("trick=%s\n", t))
+		} else {
+			// Set trick to empty/t0 to disable old obfuscation when using Amnezia
+			request.WriteString("trick=t0\n")
+		}
+		
 		request.WriteString(fmt.Sprintf("reserved=%d,%d,%d\n", peer.Reserved[0], peer.Reserved[1], peer.Reserved[2]))
 
 		for _, cidr := range peer.AllowedIPs {
@@ -113,9 +116,41 @@ func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wg
 		}
 	}
 
+	// Create the appropriate bind based on configuration
+	var bind conn.Bind = conn.NewDefaultBind()
+	
+	// If Amnezia configuration is provided, wrap the default bind
+	if amneziaConfig != nil {
+		l.Info("using Amnezia WireGuard obfuscation")
+		
+		// Extract port from the first peer endpoint
+		preflightPort := 443 // default fallback
+		if len(conf.Peers) > 0 && conf.Peers[0].Endpoint != "" {
+			_, portStr, err := net.SplitHostPort(conf.Peers[0].Endpoint)
+			if err == nil {
+				if port, err := strconv.Atoi(portStr); err == nil {
+					preflightPort = port
+				}
+			}
+		}
+		
+		l.Info("using preflight port", "port", preflightPort)
+		amnesiaBind, err := preflightbind.NewWithAmnezia(
+			bind, // Use the already created bind instead of creating a new one
+			amneziaConfig,
+			preflightPort, // extracted port for preflight packets
+			100*time.Millisecond, // minimum interval between preflights (reduced from 1 second)
+		)
+		if err != nil {
+			l.Error("failed to create Amnezia bind", "error", err)
+			return err
+		}
+		bind = amnesiaBind
+	}
+
 	dev := device.NewDevice(
 		tunDev,
-		conn.NewDefaultBind(),
+		bind,
 		device.NewSLogger(l.With("subsystem", "wireguard-go")),
 	)
 
