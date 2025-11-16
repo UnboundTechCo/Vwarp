@@ -50,13 +50,13 @@ type AmneziaConfig struct {
 
 // Bind wraps a conn.Bind and fires QUIC-like preflight when WG sends a handshake initiation.
 type Bind struct {
-	inner            conn.Bind
-	port443          int            // usually 443
-	payload          []byte         // I1 bytes
-	amneziaConfig    *AmneziaConfig // Amnezia configuration
-	mu               sync.Mutex
-	lastSent         map[netip.Addr]time.Time // rate-limit per dst IP
-	interval         time.Duration            // e.g., 1s to avoid duplicate bursts
+	inner             conn.Bind
+	port443           int            // usually 443
+	payload           []byte         // I1 bytes
+	amneziaConfig     *AmneziaConfig // Amnezia configuration
+	mu                sync.Mutex
+	lastSent          map[netip.Addr]time.Time // rate-limit per dst IP
+	interval          time.Duration            // e.g., 1s to avoid duplicate bursts
 	postHandshakeSent map[netip.Addr]bool      // track if post-handshake junk sent per IP
 }
 
@@ -569,7 +569,7 @@ func (b *Bind) executeMinimalPreHandshakeSequence(host string) {
 
 func (b *Bind) Send(bufs [][]byte, ep conn.Endpoint) error {
 	b.maybePreflightUsingSameSocket(ep, bufs)
-	
+
 	// Send post-handshake junk packets if needed
 	b.maybeSendPostHandshakeJunk(ep, bufs)
 
@@ -583,15 +583,15 @@ func (b *Bind) maybeSendPostHandshakeJunk(ep conn.Endpoint, bufs [][]byte) {
 	if b.amneziaConfig == nil {
 		return
 	}
-	
+
 	config := b.amneziaConfig
-	
+
 	// Calculate remaining junk packets to send after handshake
 	remainingJunk := config.Jc - config.JcBeforeHS
 	if remainingJunk <= 0 {
 		return
 	}
-	
+
 	// Check if this is a handshake initiation (type 1)
 	var seenHandshakeRequest bool
 	for _, buf := range bufs {
@@ -600,11 +600,11 @@ func (b *Bind) maybeSendPostHandshakeJunk(ep conn.Endpoint, bufs [][]byte) {
 			break
 		}
 	}
-	
+
 	if !seenHandshakeRequest {
 		return
 	}
-	
+
 	dst := ep.DstIP()
 	b.mu.Lock()
 	alreadySent := b.postHandshakeSent[dst]
@@ -614,7 +614,7 @@ func (b *Bind) maybeSendPostHandshakeJunk(ep conn.Endpoint, bufs [][]byte) {
 	}
 	b.postHandshakeSent[dst] = true
 	b.mu.Unlock()
-	
+
 	// Send remaining junk packets using WireGuard socket (same source port)
 	// Send immediately after handshake request without delay
 	go func() {
