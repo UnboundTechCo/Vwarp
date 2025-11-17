@@ -86,7 +86,7 @@ func waitHandshake(ctx context.Context, l *slog.Logger, dev *device.Device) erro
 	return nil
 }
 
-func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wgtun.Device, fwmark uint32, t string, AtomicNoizeConfig *preflightbind.AtomicNoizeConfig) error {
+func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wgtun.Device, fwmark uint32, t string, AtomicNoizeConfig *preflightbind.AtomicNoizeConfig, proxyAddress string) error {
 	// create the IPC message to establish the wireguard conn
 	var request bytes.Buffer
 
@@ -117,9 +117,17 @@ func establishWireguard(l *slog.Logger, conf *wiresocks.Configuration, tunDev wg
 	}
 
 	// Create the appropriate bind based on configuration
-	var bind conn.Bind = conn.NewDefaultBind()
+	var bind conn.Bind
 	
-	// If AtomicNoize configuration is provided, wrap the default bind
+	// If proxy address is provided, create a proxy-aware bind
+	if proxyAddress != "" {
+		l.Info("using SOCKS proxy for WireGuard traffic", "proxy", proxyAddress)
+		bind = conn.NewProxyBind(proxyAddress)
+	} else {
+		bind = conn.NewDefaultBind()
+	}
+	
+	// If AtomicNoizeConfig configuration is provided, wrap the bind
 	if AtomicNoizeConfig != nil {
 		l.Info("using AtomicNoize WireGuard obfuscation")
 		

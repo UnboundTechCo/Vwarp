@@ -35,6 +35,7 @@ type WarpOptions struct {
 	Reserved        string
 	TestURL         string
 	AtomicNoizeConfig   *preflightbind.AtomicNoizeConfig
+	ProxyAddress    string
 }
 
 type PsiphonOptions struct {
@@ -147,7 +148,7 @@ func runWireguard(ctx context.Context, l *slog.Logger, opts WarpOptions) error {
 			continue
 		}
 
-		werr = establishWireguard(l, conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig)
+		werr = establishWireguard(l, conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig, opts.ProxyAddress)
 		if werr != nil {
 			continue
 		}
@@ -219,7 +220,7 @@ func runWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoint str
 			continue
 		}
 
-		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig)
+		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig, opts.ProxyAddress)
 		if werr != nil {
 			continue
 		}
@@ -291,7 +292,7 @@ func runWarpInWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoi
 			continue
 		}
 
-		werr = establishWireguard(l.With("gool", "outer"), &conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig)
+		werr = establishWireguard(l.With("gool", "outer"), &conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig, opts.ProxyAddress)
 		if werr != nil {
 			continue
 		}
@@ -350,7 +351,7 @@ func runWarpInWarp(ctx context.Context, l *slog.Logger, opts WarpOptions, endpoi
 	}
 
 	// Establish wireguard on userspace stack
-	if err := establishWireguard(l.With("gool", "inner"), &conf, tunDev, opts.FwMark, "t0", nil); err != nil {
+	if err := establishWireguard(l.With("gool", "inner"), &conf, tunDev, opts.FwMark, "t0", nil, ""); err != nil {
 		return err
 	}
 
@@ -414,7 +415,7 @@ func runWarpWithPsiphon(ctx context.Context, l *slog.Logger, opts WarpOptions, e
 			continue
 		}
 
-		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig)
+		werr = establishWireguard(l, &conf, tunDev, opts.FwMark, t, opts.AtomicNoizeConfig, opts.ProxyAddress)
 		if werr != nil {
 			continue
 		}

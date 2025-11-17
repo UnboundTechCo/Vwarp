@@ -61,6 +61,9 @@ type rootConfig struct {
 	AtomicNoizeJunkInterval   time.Duration
 	AtomicNoizeAllowZeroSize  bool
 	AtomicNoizeHandshakeDelay time.Duration
+
+	// SOCKS proxy configuration
+	proxyAddress string
 }
 
 func newRootCmd() *rootConfig {
@@ -241,6 +244,11 @@ func newRootCmd() *rootConfig {
 		Value:    ffval.NewValueDefault(&cfg.AtomicNoizeHandshakeDelay, 0*time.Millisecond),
 		Usage:    "Delay before actual WireGuard handshake after I-sequence (e.g., 50ms, 100ms)",
 	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "proxy",
+		Value:    ffval.NewValueDefault(&cfg.proxyAddress, ""),
+		Usage:    "SOCKS5 proxy address to route WireGuard traffic through (e.g., socks5://127.0.0.1:1080)",
+	})
 	cfg.command = &ff.Command{
 		Name:  appName,
 		Flags: cfg.flags,
@@ -289,6 +297,7 @@ func (c *rootConfig) exec(ctx context.Context, args []string) error {
 		Reserved:          c.reserved,
 		TestURL:           c.testUrl,
 		AtomicNoizeConfig: c.buildAtomicNoizeConfig(),
+		ProxyAddress:      c.proxyAddress,
 	}
 
 	switch {
