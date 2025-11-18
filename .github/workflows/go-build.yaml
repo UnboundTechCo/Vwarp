@@ -85,47 +85,47 @@ jobs:
 
       - name: Build warp-plus
         run: |
-          go build -v -o warp-plus_${{ env.ASSET_NAME }}/ -trimpath -ldflags "-s -w -buildid= -checklinkname=0 -X main.version=${{ github.ref }}" ./cmd/warp-plus
-          go build -v -o warp-scan_${{ env.ASSET_NAME }}/ -trimpath -ldflags "-s -w -buildid= -checklinkname=0 -X main.version=${{ github.ref }}" ./cmd/warp-scan
+          go build -v -o vwarp_${{ env.ASSET_NAME }}/ -trimpath -ldflags "-s -w -buildid= -checklinkname=0 -X main.version=${{ github.ref }}" ./cmd/warp-plus
+          go build -v -o vwarp-scan_${{ env.ASSET_NAME }}/ -trimpath -ldflags "-s -w -buildid= -checklinkname=0 -X main.version=${{ github.ref }}" ./cmd/warp-scan
 
       - name: Copy README.md & LICENSE
         run: |
-          cp ${GITHUB_WORKSPACE}/README.md ./warp-plus_${{ env.ASSET_NAME }}/README.md
-          cp ${GITHUB_WORKSPACE}/LICENSE-GPL-3.0 ./warp-plus_${{ env.ASSET_NAME }}/LICENSE-GPL-3.0
+          cp ${GITHUB_WORKSPACE}/README.md ./vwarp_${{ env.ASSET_NAME }}/README.md
+          cp ${GITHUB_WORKSPACE}/LICENSE-GPL-3.0 ./vwarp_${{ env.ASSET_NAME }}/LICENSE-GPL-3.0
 
       - name: Create ZIP archive
         shell: bash
         run: |
-          pushd ./warp-plus_${{ env.ASSET_NAME }} || exit 1
+          pushd ./vwarp_${{ env.ASSET_NAME }} || exit 1
           touch -mt $(date +%Y01010000) *
           zip -9vr ../warp-plus_${{ env.ASSET_NAME }}.zip .
           popd || exit 1
-          FILE=./warp-plus_${{ env.ASSET_NAME }}.zip
+          FILE=./vwarp_${{ env.ASSET_NAME }}.zip
           DGST=$FILE.dgst
           for METHOD in {"md5","sha256","sha512"}
           do
             openssl dgst -$METHOD $FILE | sed 's/([^)]*)//g' >>$DGST
           done
 
-      - name: Upload warp-plus files to Artifacts
+      - name: Upload vwarp files to Artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: warp-plus_${{ env.ASSET_NAME }}_${{ env.REF }}
+          name: vwarp_${{ env.ASSET_NAME }}_${{ env.REF }}
           path: |
-            ./warp-plus_${{ env.ASSET_NAME }}/*
+            ./vwarp_${{ env.ASSET_NAME }}/*
 
-      - name: Upload warp-scan files to Artifacts
+      - name: Upload vwarp-scan files to Artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: warp-scan_${{ env.ASSET_NAME }}_${{ env.REF }}
+          name: vwarp-scan_${{ env.ASSET_NAME }}_${{ env.REF }}
           path: |
-            ./warp-scan_${{ env.ASSET_NAME }}/*
+            ./vwarp-scan_${{ env.ASSET_NAME }}/*
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         if: github.event_name == 'release'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./warp-plus_${{ env.ASSET_NAME }}.zip*
+          file: ./vwarp_${{ env.ASSET_NAME }}.zip*
           tag: ${{ github.ref }}
           file_glob: true
