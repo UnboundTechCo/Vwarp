@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/bepass-org/warp-plus/ipscanner"
-	"github.com/bepass-org/warp-plus/warp"
+	"github.com/bepass-org/vwarp/ipscanner"
+	"github.com/bepass-org/vwarp/warp"
 )
 
 type ScanOptions struct {

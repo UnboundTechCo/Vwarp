@@ -1,17 +1,17 @@
 # SOCKS5 Proxy Chaining Guide
 
-This guide explains how to use Warp-Plus with SOCKS5 proxy chaining to create double-VPN configurations for enhanced privacy and censorship circumvention.
+This guide explains how to use Vwarp with SOCKS5 proxy chaining to create double-VPN configurations for enhanced privacy and censorship circumvention.
 
 ## Quick Reference
 
 | Use Case | Command |
 |----------|---------|
-| Basic proxy chaining | `warp-plus --proxy socks5://127.0.0.1:1080` |
-| With AtomicNoize | `warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable` |
-| Maximum privacy | `warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --atomicnoize-junk-size 50` |
-| Through SSH tunnel | `ssh -D 1080 -N user@server` then `warp-plus --proxy socks5://127.0.0.1:1080` |
-| With Psiphon | `warp-plus --cfon --country US --proxy socks5://127.0.0.1:1080` |
-| Scan through proxy | `warp-plus --proxy socks5://127.0.0.1:1080 --scan --rtt 800ms` |
+| Basic proxy chaining | `Vwarp --proxy socks5://127.0.0.1:1080` |
+| With AtomicNoize | `Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable` |
+| Maximum privacy | `Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --atomicnoize-junk-size 50` |
+| Through SSH tunnel | `ssh -D 1080 -N user@server` then `Vwarp --proxy socks5://127.0.0.1:1080` |
+| With Psiphon | `Vwarp --cfon --country US --proxy socks5://127.0.0.1:1080` |
+| Scan through proxy | `Vwarp --proxy socks5://127.0.0.1:1080 --scan --rtt 800ms` |
 
 ## Table of Contents
 
@@ -57,7 +57,7 @@ Your Application
 Chain WARP through a local VPN to hide WireGuard traffic patterns:
 
 ```bash
-warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --bind 127.0.0.1:8086
+Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --bind 127.0.0.1:8086
 ```
 
 ### 2. Change Exit Location
@@ -67,7 +67,7 @@ Use WARP for speed while routing through a specific geographic location:
 ```bash
 # First VPN in Japan (SOCKS5 on port 1080)
 # WARP exit in US
-warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
+Vwarp --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
 ```
 
 ### 3. Corporate Network Traversal
@@ -75,7 +75,7 @@ warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
 Route WARP through corporate proxy:
 
 ```bash
-warp-plus --proxy socks5://proxy.company.com:1080 --bind 127.0.0.1:8086
+Vwarp --proxy socks5://proxy.company.com:1080 --bind 127.0.0.1:8086
 ```
 
 ### 4. Triple-VPN with Psiphon
@@ -83,7 +83,7 @@ warp-plus --proxy socks5://proxy.company.com:1080 --bind 127.0.0.1:8086
 Combine Psiphon, WARP, and external proxy:
 
 ```bash
-warp-plus --cfon --country US --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
+Vwarp --cfon --country US --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
 ```
 
 ## Quick Start
@@ -91,16 +91,16 @@ warp-plus --cfon --country US --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8
 ### Prerequisites
 
 1. A running SOCKS5 proxy (VPN, SSH tunnel, or proxy service)
-2. Warp-Plus installed
+2. Vwarp installed
 3. Basic understanding of proxy configuration
 
 ### Basic Setup
 
 1. **Start your SOCKS5 proxy** (e.g., OpenVPN, SSH tunnel, or WireGuard)
 
-2. **Run Warp-Plus with proxy flag**:
+2. **Run Vwarp with proxy flag**:
    ```bash
-   warp-plus --proxy socks5://127.0.0.1:1080
+   Vwarp --proxy socks5://127.0.0.1:1080
    ```
 
 3. **Configure your applications** to use WARP SOCKS5 proxy:
@@ -116,8 +116,8 @@ Create a SOCKS5 proxy using SSH:
 # Create SSH tunnel (SOCKS5 proxy on port 1080)
 ssh -D 1080 -N user@your-server.com
 
-# Run Warp-Plus through the tunnel
-warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086 --verbose
+# Run Vwarp through the tunnel
+Vwarp --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086 --verbose
 ```
 
 ### Example: OpenVPN + WARP
@@ -130,7 +130,7 @@ sudo openvpn --config vpn.ovpn
 ssh -D 127.0.0.1:1080 -N user@localhost
 
 # Chain WARP through the proxy
-warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
+Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
 ```
 
 ## Configuration
@@ -138,7 +138,7 @@ warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
 ### Command Line
 
 ```bash
-warp-plus --proxy socks5://HOST:PORT [other-options]
+Vwarp --proxy socks5://HOST:PORT [other-options]
 ```
 
 **Proxy Format Options:**
@@ -166,7 +166,7 @@ Create a JSON configuration file:
 
 Run with config:
 ```bash
-warp-plus --config myconfig.json
+Vwarp --config myconfig.json
 ```
 
 ### Combining with AtomicNoize
@@ -174,7 +174,7 @@ warp-plus --config myconfig.json
 For maximum obfuscation, combine proxy chaining with AtomicNoize:
 
 ```bash
-warp-plus \
+Vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --atomicnoize-enable \
   --atomicnoize-packet-size 1280 \
@@ -195,7 +195,7 @@ This creates three layers:
 Enable verbose mode to see connection details:
 
 ```bash
-warp-plus --proxy socks5://127.0.0.1:1080 --verbose
+Vwarp --proxy socks5://127.0.0.1:1080 --verbose
 ```
 
 Look for these log messages:
@@ -210,7 +210,7 @@ UDP bind has been updated
 Specify WARP endpoints with proxy:
 
 ```bash
-warp-plus \
+Vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --endpoint 162.159.192.1:500 \
   --bind 127.0.0.1:8086
@@ -219,7 +219,7 @@ warp-plus \
 ### Scan for Best Endpoint Through Proxy
 
 ```bash
-warp-plus --proxy socks5://127.0.0.1:1080 --scan --rtt 800ms
+Vwarp --proxy socks5://127.0.0.1:1080 --scan --rtt 800ms
 ```
 
 ### Multi-Instance Setup
@@ -228,10 +228,10 @@ Run multiple WARP instances through different proxies:
 
 ```bash
 # Instance 1: Through SSH tunnel on US server
-warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086 --cache-dir ~/.cache/warp1
+Vwarp --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086 --cache-dir ~/.cache/warp1
 
 # Instance 2: Through SSH tunnel on EU server
-warp-plus --proxy socks5://127.0.0.1:1081 --bind 127.0.0.1:8087 --cache-dir ~/.cache/warp2
+Vwarp --proxy socks5://127.0.0.1:1081 --bind 127.0.0.1:8087 --cache-dir ~/.cache/warp2
 ```
 
 ### Warp-in-Warp with Proxy
@@ -240,10 +240,10 @@ Chain WARP instances with external proxy:
 
 ```bash
 # First WARP instance through proxy
-warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
+Vwarp --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
 
 # Second WARP instance through first WARP
-warp-plus --gool --bind 127.0.0.1:8087
+Vwarp --gool --bind 127.0.0.1:8087
 ```
 
 ## Troubleshooting
@@ -283,17 +283,17 @@ warp-plus --gool --bind 127.0.0.1:8087
 **Solutions**:
 1. Test proxy latency:
    ```bash
-   warp-plus --proxy socks5://127.0.0.1:1080 --test-url http://connectivity.cloudflareclient.com/cdn-cgi/trace
+   Vwarp --proxy socks5://127.0.0.1:1080 --test-url http://connectivity.cloudflareclient.com/cdn-cgi/trace
    ```
 
 2. Try different WARP endpoints:
    ```bash
-   warp-plus --proxy socks5://127.0.0.1:1080 --scan --rtt 500ms
+   Vwarp --proxy socks5://127.0.0.1:1080 --scan --rtt 500ms
    ```
 
 3. Optimize AtomicNoize settings:
    ```bash
-   warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --atomicnoize-packet-size 1400
+   Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --atomicnoize-packet-size 1400
    ```
 
 ### IPv6 Errors
@@ -309,7 +309,7 @@ warp-plus --gool --bind 127.0.0.1:8087
 **Solutions**:
 1. Specify custom DNS:
    ```bash
-   warp-plus --proxy socks5://127.0.0.1:1080 --dns 8.8.8.8
+   Vwarp --proxy socks5://127.0.0.1:1080 --dns 8.8.8.8
    ```
 
 2. Use proxy DNS resolution
@@ -320,7 +320,7 @@ warp-plus --gool --bind 127.0.0.1:8087
 Enable verbose logging to diagnose issues:
 
 ```bash
-warp-plus --proxy socks5://127.0.0.1:1080 --verbose 2>&1 | tee warp-debug.log
+Vwarp --proxy socks5://127.0.0.1:1080 --verbose 2>&1 | tee warp-debug.log
 ```
 
 Check for:
@@ -379,7 +379,7 @@ Destination: See traffic from Cloudflare IP
 
 **Maximum Privacy**:
 ```bash
-warp-plus \
+Vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --atomicnoize-enable \
   --atomicnoize-packet-size 1280 \
@@ -390,7 +390,7 @@ warp-plus \
 
 **Best Performance**:
 ```bash
-warp-plus \
+Vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --endpoint <scanned-optimal-endpoint> \
   --atomicnoize-enable \
@@ -399,7 +399,7 @@ warp-plus \
 
 **Balanced**:
 ```bash
-warp-plus \
+Vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --atomicnoize-enable \
   --scan \
@@ -453,7 +453,7 @@ ss-local -c config.json
 ssh -D 1080 -N -C user@remote-server.com
 
 # Terminal 2: Run WARP through tunnel
-warp-plus \
+Vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --atomicnoize-enable \
   --bind 127.0.0.1:8086 \
@@ -469,7 +469,7 @@ warp-plus \
 ss-local -c ss-config.json -l 1080
 
 # Terminal 2: WARP through Shadowsocks
-warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
+Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
 
 # Result: Shadowsocks obfuscation + WARP speed
 ```
@@ -484,14 +484,14 @@ sudo wg-quick up wg0
 ssh -D 127.0.0.1:1080 -N user@10.0.0.1
 
 # Terminal 3: Chain WARP
-warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
+Vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable
 ```
 
 ### Example 4: Psiphon + External Proxy + WARP
 
 ```bash
 # Chain three layers for maximum censorship resistance
-warp-plus \
+Vwarp \
   --cfon --country US \
   --proxy socks5://127.0.0.1:1080 \
   --atomicnoize-enable \

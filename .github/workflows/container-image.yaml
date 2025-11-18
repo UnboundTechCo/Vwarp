@@ -54,4 +54,4 @@ jobs:
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           GOFLAGS: "-ldflags=-checklinkname=0"
-        run: ko build ./cmd/warp-plus --platform "${PLATFORMS}" --bare --tags $(echo $TAGS | tr ' ' ',')
+        run: ko build ./cmd/vwarp --platform "${PLATFORMS}" --bare --tags $(echo $TAGS | tr ' ' ',')

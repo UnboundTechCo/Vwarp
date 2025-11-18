@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/bepass-org/warp-plus/proxy/pkg/http"
-	"github.com/bepass-org/warp-plus/proxy/pkg/socks4"
-	"github.com/bepass-org/warp-plus/proxy/pkg/socks5"
-	"github.com/bepass-org/warp-plus/proxy/pkg/statute"
+	"github.com/bepass-org/vwarp/proxy/pkg/http"
+	"github.com/bepass-org/vwarp/proxy/pkg/socks4"
+	"github.com/bepass-org/vwarp/proxy/pkg/socks5"
+	"github.com/bepass-org/vwarp/proxy/pkg/statute"
 )
 
 type userHandler func(request *statute.ProxyRequest) error

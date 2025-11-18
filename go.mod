@@ -1,4 +1,4 @@
-module github.com/bepass-org/warp-plus
+module github.com/bepass-org/vwarp
 
 go 1.24
 

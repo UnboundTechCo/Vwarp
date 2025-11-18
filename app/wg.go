@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bepass-org/warp-plus/wireguard/conn"
-	"github.com/bepass-org/warp-plus/wireguard/device"
-	"github.com/bepass-org/warp-plus/wireguard/preflightbind"
-	wgtun "github.com/bepass-org/warp-plus/wireguard/tun"
-	"github.com/bepass-org/warp-plus/wireguard/tun/netstack"
-	"github.com/bepass-org/warp-plus/wiresocks"
+	"github.com/bepass-org/vwarp/wireguard/conn"
+	"github.com/bepass-org/vwarp/wireguard/device"
+	"github.com/bepass-org/vwarp/wireguard/preflightbind"
+	wgtun "github.com/bepass-org/vwarp/wireguard/tun"
+	"github.com/bepass-org/vwarp/wireguard/tun/netstack"
+	"github.com/bepass-org/vwarp/wiresocks"
 )
 
 func usermodeTunTest(ctx context.Context, l *slog.Logger, tnet *netstack.Net, url string) error {

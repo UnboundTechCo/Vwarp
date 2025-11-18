@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/bepass-org/warp-plus/proxy/pkg/statute"
+	"github.com/bepass-org/vwarp/proxy/pkg/statute"
 )
 
 type Server struct {

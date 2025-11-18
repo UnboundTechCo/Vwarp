@@ -226,12 +226,12 @@ After handshake: 20 - 3 - 5 = 12 packets
 
 ### Run with Config File
 ```bash
-./warp-plus --config config.json
+./Vwarp --config config.json
 ```
 
 ### Run with Command Line Flags
 ```bash
-./warp-plus \
+./Vwarp \
   --atomicnoize-enable \
   --atomicnoize-i1 "<b 0xc200...>" \
   --atomicnoize-jc 15 \
@@ -244,7 +244,7 @@ After handshake: 20 - 3 - 5 = 12 packets
 
 ### Enable Verbose Logging
 ```bash
-./warp-plus --config config.json --verbose
+./Vwarp --config config.json --verbose
 ```
 
 **Tip:** Use verbose mode to see detailed packet flow in logs
