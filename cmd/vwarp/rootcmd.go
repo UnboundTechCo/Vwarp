@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
-	"github.com/bepass-org/warp-plus/app"
-	p "github.com/bepass-org/warp-plus/psiphon"
-	"github.com/bepass-org/warp-plus/warp"
-	"github.com/bepass-org/warp-plus/wireguard/preflightbind"
-	"github.com/bepass-org/warp-plus/wiresocks"
+	"github.com/bepass-org/vwarp/app"
+	p "github.com/bepass-org/vwarp/psiphon"
+	"github.com/bepass-org/vwarp/warp"
+	"github.com/bepass-org/vwarp/wireguard/preflightbind"
+	"github.com/bepass-org/vwarp/wiresocks"
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffval"
 )

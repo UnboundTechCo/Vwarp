@@ -17,7 +17,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/bepass-org/warp-plus/wireguard/conn/winrio"
+	"github.com/bepass-org/vwarp/wireguard/conn/winrio"
 )
 
 const (

@@ -9,13 +9,13 @@ import (
 	"net/netip"
 	"path"
 
-	"github.com/bepass-org/warp-plus/iputils"
-	"github.com/bepass-org/warp-plus/psiphon"
-	"github.com/bepass-org/warp-plus/warp"
-	"github.com/bepass-org/warp-plus/wireguard/preflightbind"
-	"github.com/bepass-org/warp-plus/wireguard/tun"
-	"github.com/bepass-org/warp-plus/wireguard/tun/netstack"
-	"github.com/bepass-org/warp-plus/wiresocks"
+	"github.com/bepass-org/vwarp/iputils"
+	"github.com/bepass-org/vwarp/psiphon"
+	"github.com/bepass-org/vwarp/warp"
+	"github.com/bepass-org/vwarp/wireguard/preflightbind"
+	"github.com/bepass-org/vwarp/wireguard/tun"
+	"github.com/bepass-org/vwarp/wireguard/tun/netstack"
+	"github.com/bepass-org/vwarp/wiresocks"
 )
 
 const singleMTU = 1330

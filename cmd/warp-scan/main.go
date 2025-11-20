@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/bepass-org/warp-plus/ipscanner"
-	"github.com/bepass-org/warp-plus/warp"
+	"github.com/bepass-org/vwarp/ipscanner"
+	"github.com/bepass-org/vwarp/warp"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/fatih/color"
 	"github.com/peterbourgon/ff/v4"

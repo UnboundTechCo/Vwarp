@@ -14,7 +14,7 @@ import (
 	"github.com/peterbourgon/ff/v4/ffjson"
 )
 
-const appName = "warp-plus"
+const appName = "vwarp"
 
 func main() {
 	args := os.Args[1:]

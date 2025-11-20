@@ -46,14 +46,14 @@ install() {
     pkg install openssh -y
     check_dependencies
 
-    if wget https://github.com/bepass-org/warp-plus/releases/latest/download/warp-plus_android-arm64.zip &&
-        unzip warp-plus_android-arm64.zip &&
-        mv warp-plus warp &&
+    if wget https://github.com/bepass-org/vwarp/releases/latest/download/vwarp_android-arm64.zip &&
+        unzip vwarp_android-arm64.zip &&
+        mv vwarp warp &&
         chmod +x warp &&
         cp warp "$PREFIX/bin/usef" &&
-        cp warp "$PREFIX/bin/warp-plus" &&
+        cp warp "$PREFIX/bin/vwarp" &&
         cp warp "$PREFIX/bin/warp"; then
-        rm "README.md" "LICENSE" "warp-plus_android-arm64.zip"
+        rm "README.md" "LICENSE" "vwarp_android-arm64.zip"
         echo "================================================"
         echo -e "${green}Warp installed successfully.${rest}"
         socks
@@ -85,16 +85,16 @@ install_arm() {
         *) echo -e "${red}Unsupported architecture.${rest}"; return ;;
     esac
 
-    WARP_URL="https://github.com/bepass-org/warp-plus/releases/latest/download/warp-plus_linux-$ARCH.zip"
+    WARP_URL="https://github.com/bepass-org/vwarp/releases/latest/download/vwarp_linux-$ARCH.zip"
 
     if wget "$WARP_URL" &&
-        unzip "warp-plus_linux-$ARCH.zip" &&
-        mv warp-plus warp &&
+        unzip "vwarp_linux-$ARCH.zip" &&
+        mv vwarp warp &&
         chmod +x warp &&
         cp warp "$PREFIX/bin/usef" &&
-        cp warp "$PREFIX/bin/warp-plus" &&
+        cp warp "$PREFIX/bin/vwarp" &&
         cp warp "$PREFIX/bin/warp"; then
-        rm "README.md" "LICENSE" "warp-plus_linux-$ARCH.zip"
+        rm "README.md" "LICENSE" "vwarp_linux-$ARCH.zip"
         echo -e "${blue}================================================${rest}"
         echo -e "${blue}================================================${rest}"
         echo -e "${green}Warp installed successfully.${rest}"
@@ -113,7 +113,7 @@ socks() {
    echo "or"
    echo -e "${green}Manually create a SOCKS configuration with IP ${purple}127.0.0.1 ${green}and port${purple} 8086..${rest}"
    echo -e "${blue}================================================${rest}"
-   echo -e "${yellow}To run again, type:${green} warp ${rest}or${green} usef ${rest}or${green} ./warp ${rest}or${green} warp-plus ${rest}"
+   echo -e "${yellow}To run again, type:${green} warp ${rest}or${green} usef ${rest}or${green} ./warp ${rest}or${green} vwarp ${rest}"
    echo -e "${blue}================================================${rest}"
    echo -e "${green} If you get a 'Bad address' error, run ${yellow}[Arm]${rest}"
    echo -e "${blue}================================================${rest}"
@@ -282,10 +282,10 @@ psiphon_location() {
 #Uninstall
 uninstall() {
     warp="$PREFIX/bin/warp"
-    directory="/data/data/com.termux/files/home/warp-plus"
+    directory="/data/data/com.termux/files/home/vwarp"
     home="/data/data/com.termux/files/home"
     if [ -f "$warp" ]; then
-        rm -rf "$directory" "$PREFIX/bin/usef" "wa.py" "$PREFIX/bin/warp" "$PREFIX/bin/warp-plus" "warp" "/data/data/com.termux/files/home/.cache/warp-plus" > /dev/null 2>&1
+        rm -rf "$directory" "$PREFIX/bin/usef" "wa.py" "$PREFIX/bin/warp" "$PREFIX/bin/vwarp" "warp" "/data/data/com.termux/files/home/.cache/vwarp" > /dev/null 2>&1
         echo -e "${purple}*********************************${rest}"
         echo -e "${red}Uninstallation completed.${rest}"
         echo -e "${purple}*********************************${rest}"
@@ -297,7 +297,7 @@ uninstall() {
 }
 
 # Warp to Warp plus
-warp_plus() {
+vwarp() {
     if ! command -v python &> /dev/null; then
         echo "Installing Python..."
         pkg install python -y
@@ -313,9 +313,9 @@ menu() {
     clear
     echo -e "${green}By --> Peyman * Github.com/Ptechgithub * ${rest}"
     echo ""
-    echo -e "${yellow}❤️Github.com/${cyan}bepass-org${yellow}/warp-plus❤️${rest}"
+    echo -e "${yellow}❤️Github.com/${cyan}bepass-org${yellow}/vwarp❤️${rest}"
     echo -e "${purple}*********************************${rest}"
-    echo -e "${blue}  ###${cyan} Warp-Plus in Termux ${blue}###${rest} ${purple}  * ${rest}"
+    echo -e "${blue}  ###${cyan} vwarp in Termux ${blue}###${rest} ${purple}  * ${rest}"
     echo -e "${purple}*********************************${rest}"
     echo -e "${cyan}1]${rest} ${green}Install Warp (vpn)${purple}           * ${rest}"
     echo -e "                              ${purple}  * ${rest}"
@@ -354,7 +354,7 @@ menu() {
             psiphon_location
             ;;
         6)
-            warp_plus
+            vwarp
             ;;
         0)
             echo -e "${purple}*********************************${rest}"

@@ -1,6 +1,6 @@
-# Warp-Plus
+# vwarp
 
-Warp-Plus is an open-source implementation of Cloudflare's Warp, enhanced with Psiphon integration for circumventing censorship. This project aims to provide a robust and cross-platform VPN solution that can use psiphon on top of warp and warp-in-warp for changing the user virtual nat location.
+vwarp is an open-source implementation of Cloudflare's Warp, enhanced with Psiphon integration for circumventing censorship. This project aims to provide a robust and cross-platform VPN solution that can use psiphon on top of warp and warp-in-warp for changing the user virtual nat location.
 <div align="center">
 
 <img src="https://github.com/voidr3aper-anon/Vwarp/blob/master/logo/logo.png" width="350" alt="Vwarp Logo" />
@@ -15,16 +15,16 @@ Warp-Plus is an open-source implementation of Cloudflare's Warp, enhanced with P
 
 ```bash
 # Basic WARP connection
-warp-plus --bind 127.0.0.1:8086
+vwarp --bind 127.0.0.1:8086
 
 # With AtomicNoize obfuscation (anti-censorship)
-warp-plus --atomicnoize-enable --bind 127.0.0.1:8086
+vwarp --atomicnoize-enable --bind 127.0.0.1:8086
 
 # Through SOCKS5 proxy (double-VPN)
-warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
+vwarp --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
 
 # Maximum privacy (AtomicNoize + SOCKS5 proxy)
-warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --verbose
+vwarp --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --verbose
 ```
 
 📖 **New to these features?** Check out the [SOCKS5 Proxy Guide](SOCKS_PROXY_GUIDE.md) and [AtomicNoize Guide](cmd/docs/ATOMICNOIZE_README.md)
@@ -42,74 +42,86 @@ warp-plus --proxy socks5://127.0.0.1:1080 --atomicnoize-enable --verbose
 
 ### Prerequisites
 
-- [Download the latest version from the releases page](https://github.com/bepass-org/warp-plus/releases)
+- [Download the latest version from the releases page](https://github.com/bepass-org/vwarp/releases)
 - Basic understanding of VPN and proxy configurations
 
 ### Usage
 
 ```
 NAME
-  warp-plus
+  vwarp
 
 FLAGS
-  -4                       only use IPv4 for random warp endpoint
-  -6                       only use IPv6 for random warp endpoint
-  -v, --verbose            enable verbose logging
-  -b, --bind STRING        socks bind address (default: 127.0.0.1:8086)
-  -e, --endpoint STRING    warp endpoint
-  -k, --key STRING         warp key
-      --dns STRING         DNS address (default: 1.1.1.1)
-      --gool               enable gool mode (warp in warp)
-      --cfon               enable psiphon mode (must provide country as well)
-      --country STRING     psiphon country code (valid values: [AT AU BE BG CA CH CZ DE DK EE ES FI FR GB HR HU IE IN IT JP LV NL NO PL PT RO RS SE SG SK US]) (default: AT)
-      --scan               enable warp scanning
-      --rtt DURATION       scanner rtt limit (default: 1s)
-      --cache-dir STRING   directory to store generated profiles
-      --fwmark UINT        set linux firewall mark for tun mode (requires sudo/root/CAP_NET_ADMIN) (default: 0)
-      --reserved STRING    override wireguard reserved value (format: '1,2,3')
-      --wgconf STRING      path to a normal wireguard config
-      --test-url STRING    connectivity test url (default: http://connectivity.cloudflareclient.com/cdn-cgi/trace)
-      --proxy STRING       SOCKS5 proxy address to route WireGuard traffic through (e.g., socks5://127.0.0.1:1080)
-      --atomicnoize-enable enable AtomicNoize protocol obfuscation
-      --atomicnoize-packet-size UINT    AtomicNoize packet size (default: 1280)
-      --atomicnoize-offset UINT         AtomicNoize packet offset (default: 8)
-      --atomicnoize-junk-size UINT      AtomicNoize junk size (default: 0)
-  -c, --config STRING      path to config file
-      --version            displays version number
+  -v, --verbose                                enable verbose logging
+  -4                                           only use IPv4 for random warp endpoint
+  -6                                           only use IPv6 for random warp endpoint
+  -b, --bind STRING                            socks bind address (default: 127.0.0.1:8086)
+  -e, --endpoint STRING                        warp endpoint
+  -k, --key STRING                             warp key
+      --dns STRING                             DNS address (default: 1.1.1.1)
+      --gool                                   enable gool mode (warp in warp)
+      --cfon                                   enable psiphon mode (must provide country as well)
+      --country STRING                         psiphon country code (default: AT)
+      --scan                                   enable warp scanning
+      --rtt DURATION                            (default: 1s)
+      --cache-dir STRING
+      --fwmark UINT32                           (default: 0)
+      --reserved STRING
+      --wgconf STRING
+      --test-url STRING                         (default: http://connectivity.cloudflareclient.com/cdn-cgi/trace)
+  -c, --config STRING
+      --atomicnoize-enable
+      --atomicnoize-i1 STRING                  AtomicNoize I1 signature packet in CPS format (e.g., '<b 0xc200...>'). Required for obfuscation.
+      --atomicnoize-i2 STRING                  AtomicNoize I2 signature packet (CPS format or simple number) (default: 1)
+      --atomicnoize-i3 STRING                  AtomicNoize I3 signature packet (CPS format or simple number) (default: 2)
+      --atomicnoize-i4 STRING                  AtomicNoize I4 signature packet (CPS format or simple number) (default: 3)
+      --atomicnoize-i5 STRING                  AtomicNoize I5 signature packet (CPS format or simple number) (default: 4)
+      --atomicnoize-s1 INT                     AtomicNoize S1 random prefix for Init packets (0-64 bytes) - disabled for WARP compatibility (default: 0)
+      --atomicnoize-s2 INT                     AtomicNoize S2 random prefix for Response packets (0-64 bytes) - disabled for WARP compatibility (default: 0)
+      --atomicnoize-jc INT                     Total number of junk packets to send (0-128) (default: 4)
+      --atomicnoize-jmin INT                   Minimum junk packet size in bytes (default: 40)
+      --atomicnoize-jmax INT                   Maximum junk packet size in bytes (default: 70)
+      --atomicnoize-jc-after-i1 INT            Number of junk packets to send immediately after I1 packet (default: 0)
+      --atomicnoize-jc-before-hs INT           Number of junk packets to send before handshake initiation (default: 0)
+      --atomicnoize-jc-after-hs INT            Number of junk packets to send after handshake (auto-calculated as Jc - JcBeforeHS - JcAfterI1) (default: 0)
+      --atomicnoize-junk-interval DURATION     Time interval between sending junk packets (e.g., 10ms, 50ms) (default: 10ms)
+      --atomicnoize-allow-zero-size            Allow zero-size junk packets (may not work with all UDP implementations)
+      --atomicnoize-handshake-delay DURATION   Delay before actual WireGuard handshake after I-sequence (e.g., 50ms, 100ms) (default: 0s)
+      --proxy STRING                           SOCKS5 proxy address to route WireGuard traffic through (e.g., socks5://127.0.0.1:1080)
 ```
 
 ### Basic Examples
 
 #### Standard WARP Connection
 ```bash
-warp-plus --bind 127.0.0.1:8086
+vwarp --bind 127.0.0.1:8086
 ```
 
 #### With AtomicNoize Obfuscation
 ```bash
-warp-plus --atomicnoize-enable --atomicnoize-packet-size 1280 --bind 127.0.0.1:8086
+vwarp --atomicnoize-enable --atomicnoize-packet-size 1280 --bind 127.0.0.1:8086
 ```
 
 #### Through SOCKS5 Proxy (Double VPN)
 ```bash
 # First, start your SOCKS5 proxy (e.g., SSH tunnel, VPN, etc.)
 # Then route WARP through it:
-warp-plus --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
+vwarp --proxy socks5://127.0.0.1:1080 --bind 127.0.0.1:8086
 ```
 
 #### With Psiphon for Censorship Circumvention
 ```bash
-warp-plus --cfon --country US --bind 127.0.0.1:8086
+vwarp --cfon --country US --bind 127.0.0.1:8086
 ```
 
 #### Warp-in-Warp (Change Location)
 ```bash
-warp-plus --gool --bind 127.0.0.1:8086
+vwarp --gool --bind 127.0.0.1:8086
 ```
 
 #### Maximum Privacy Setup
 ```bash
-warp-plus \
+vwarp \
   --proxy socks5://127.0.0.1:1080 \
   --atomicnoize-enable \
   --atomicnoize-packet-size 1280 \
@@ -119,7 +131,7 @@ warp-plus \
 
 #### Scan for Best Endpoint
 ```bash
-warp-plus --scan --rtt 800ms
+vwarp --scan --rtt 800ms
 ```
 
 For more detailed examples and configurations, see:
@@ -163,12 +175,12 @@ For more detailed examples and configurations, see:
 ### Termux
 
 ```
-bash <(curl -fsSL https://raw.githubusercontent.com/bepass-org/warp-plus/master/termux.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/bepass-org/vwarp/master/termux.sh)
 ```
 ![1](https://github.com/Ptechgithub/configs/blob/main/media/18.jpg?raw=true)
 
-- اگه حس کردی کانکت نمیشه یا خطا میده دستور `rm -rf .cache/warp-plus` رو بزن و مجدد warp رو وارد کن.
-- بعد از نصب برای اجرای مجدد فقط کافیه که `warp` یا `usef` یا `./warp` یا `warp-plus`را وارد کنید. همش یکیه هیچ فرقی ندارد.
+- اگه حس کردی کانکت نمیشه یا خطا میده دستور `rm -rf .cache/vwarp` رو بزن و مجدد warp رو وارد کن.
+- بعد از نصب برای اجرای مجدد فقط کافیه که `warp` یا `usef` یا `./warp` یا `vwarp`را وارد کنید. همش یکیه هیچ فرقی ندارد.
 - اگر با 1 نصب نشد و خطا گرفتید ابتدا یک بار 3 را بزنید تا `Uninstall` شود سپس عدد 2 رو انتخاب کنید یعنی Arm.
 - برای نمایش راهنما ` warp -h` را وارد کنید. 
 - ای پی و پورت `127.0.0.1:8086`پروتکل socks
@@ -195,7 +207,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/bepass-org/warp-plus/master/
 
 ## License
 
-This repository is a fork of [warp-plus] (MIT licensed).
+This repository is a fork of [vwarp] (MIT licensed).
 Original files are © their respective authors and remain under the MIT License.
 All additional changes and new files in this fork are © voidreaper and licensed under [LICENSE-GPL-3.0], see LICENSE-GPL-3.0. all new feature tricks and ideas are not allowed to copy or pull from this  repo to the main repo or other similar project unless the maintainers have granted permission.
 

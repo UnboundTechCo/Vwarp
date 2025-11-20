@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bepass-org/warp-plus/proxy/pkg/mixed"
-	"github.com/bepass-org/warp-plus/proxy/pkg/statute"
-	"github.com/bepass-org/warp-plus/wireguard/device"
-	"github.com/bepass-org/warp-plus/wireguard/tun/netstack"
+	"github.com/bepass-org/vwarp/proxy/pkg/mixed"
+	"github.com/bepass-org/vwarp/proxy/pkg/statute"
+	"github.com/bepass-org/vwarp/wireguard/device"
+	"github.com/bepass-org/vwarp/wireguard/tun/netstack"
 )
 
 // VirtualTun stores a reference to netstack network and DNS configuration

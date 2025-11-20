@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bepass-org/warp-plus/wireguard/tun"
+	"github.com/bepass-org/vwarp/wireguard/tun"
 
 	"github.com/sagernet/gvisor/pkg/buffer"
 	"github.com/sagernet/gvisor/pkg/tcpip"

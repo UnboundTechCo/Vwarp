@@ -6,8 +6,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/bepass-org/warp-plus/ipscanner/engine"
-	"github.com/bepass-org/warp-plus/ipscanner/statute"
+	"github.com/bepass-org/vwarp/ipscanner/engine"
+	"github.com/bepass-org/vwarp/ipscanner/statute"
 )
 
 type IPScanner struct {
