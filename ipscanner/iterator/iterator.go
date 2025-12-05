@@ -3,11 +3,11 @@ package iterator
 import (
 	"crypto/rand"
 	"errors"
+	"github.com/bepass-org/vwarp/ipscanner/statute"
 	"math/big"
 	"net"
 	"net/netip"
-
-	"github.com/bepass-org/vwarp/ipscanner/statute"
+	"sync"
 )
 
 // LCG represents a linear congruential generator with full period.
@@ -86,11 +86,12 @@ func (lcg *LCG) Next() *big.Int {
 }
 
 type ipRange struct {
-	lcg   *LCG
-	start netip.Addr
-	stop  netip.Addr
-	size  *big.Int
-	index *big.Int
+	prefix netip.Prefix
+	lcg    *LCG
+	start  netip.Addr
+	stop   netip.Addr
+	size   *big.Int
+	index  *big.Int
 }
 
 func newIPRange(cidr netip.Prefix) (ipRange, error) {
@@ -98,11 +99,12 @@ func newIPRange(cidr netip.Prefix) (ipRange, error) {
 	stopIP := lastIP(cidr)
 	size := ipRangeSize(cidr)
 	return ipRange{
-		start: startIP,
-		stop:  stopIP,
-		size:  size,
-		index: big.NewInt(0),
-		lcg:   NewLCG(size),
+		prefix: cidr,
+		start:  startIP,
+		stop:   stopIP,
+		size:   size,
+		index:  big.NewInt(0),
+		lcg:    NewLCG(size),
 	}, nil
 }
 
@@ -167,38 +169,178 @@ func ipRangeSize(prefix netip.Prefix) *big.Int {
 
 type IpGenerator struct {
 	ipRanges []ipRange
+	opts     *statute.ScannerOptions
+	mu       sync.Mutex
 }
 
-func (g *IpGenerator) NextBatch() ([]netip.Addr, error) {
-	var results []netip.Addr
-	for i, r := range g.ipRanges {
-		if r.index.Cmp(r.size) >= 0 {
-			continue
-		}
-		shuffleIndex := r.lcg.Next()
-		if shuffleIndex == nil {
-			continue
-		}
-		results = append(results, addIP(r.start, shuffleIndex))
-		g.ipRanges[i].index.Add(g.ipRanges[i].index, big.NewInt(1))
+// generateIPsFromRange selects a specified number of IPs distributed across a given range.
+// It divides the range into `count` segments and picks one random IP from each segment.
+// This modified version ensures that for IPv4, addresses ending in .0 or .255 are not selected.
+func (g *IpGenerator) generateIPsFromRange(r ipRange, count int) ([]netip.Addr, error) {
+	var ips []netip.Addr
+
+	// Cannot generate more IPs than available in the range.
+	if r.size.Cmp(big.NewInt(int64(count))) < 0 {
+		count = int(r.size.Int64())
 	}
+	if count == 0 {
+		return ips, nil
+	}
+
+	// Divide the range into `count` segments.
+	segmentSize := new(big.Int).Div(r.size, big.NewInt(int64(count)))
+
+	for i := 0; i < count; i++ {
+		segStart := new(big.Int).Mul(big.NewInt(int64(i)), segmentSize)
+
+		segEnd := new(big.Int).Add(segStart, segmentSize)
+		if i == count-1 {
+			// Last segment takes the remainder to cover the whole range.
+			segEnd.Set(r.size)
+		}
+
+		// Calculate the actual size of this segment.
+		currentSegmentSize := new(big.Int).Sub(segEnd, segStart)
+		if currentSegmentSize.Cmp(big.NewInt(0)) <= 0 {
+			continue
+		}
+
+		var ip netip.Addr
+		var foundValidIP bool
+		// Set a limit for retries to avoid infinite loops in segments
+		// that might only contain invalid endpoint IPs (.0 or .255).
+		const maxRetries = 10
+
+		for attempt := 0; attempt < maxRetries; attempt++ {
+			// Get a random offset within the segment.
+			offset, err := rand.Int(rand.Reader, currentSegmentSize)
+			if err != nil {
+				return nil, err
+			}
+
+			// Add segment start to the offset to get the final offset from the beginning of the range.
+			finalOffset := new(big.Int).Add(segStart, offset)
+
+			// Add the offset to the range's start IP.
+			candidateIP := addIP(r.start, finalOffset)
+
+			if !candidateIP.IsValid() {
+				continue // Safeguard against invalid IPs.
+			}
+
+			// For IPv4, check if the address is a network or broadcast address.
+			if candidateIP.Is4() {
+				addrBytes := candidateIP.As4()
+				lastOctet := addrBytes[3]
+				// A valid endpoint should not end in 0 or 255.
+				if lastOctet != 0 && lastOctet != 255 {
+					ip = candidateIP
+					foundValidIP = true
+					break // A valid endpoint IP was found.
+				}
+				// If invalid, the loop continues to try another random IP.
+			} else {
+				// For IPv6, the .0/.255 rule does not apply.
+				ip = candidateIP
+				foundValidIP = true
+				break
+			}
+		}
+
+		// Only add the IP if a valid one was found within the retry limit.
+		if foundValidIP {
+			ips = append(ips, ip)
+		}
+	}
+
+	return ips, nil
+}
+
+// Generate creates the initial list of candidate IPs by splitting ranges and sampling.
+func (g *IpGenerator) Generate() ([]netip.Addr, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	var results []netip.Addr
+	ipsPerSubnet := g.opts.BucketSize
+
+	for _, r := range g.ipRanges {
+		originalPrefix := r.prefix
+
+		if originalPrefix.Addr().Is4() {
+			subnetBits := 24 // Target subnet size for IPv4
+			if originalPrefix.Bits() >= subnetBits {
+				// The range is a /24 or smaller, so we scan it directly.
+				ips, err := g.generateIPsFromRange(r, ipsPerSubnet)
+				if err != nil {
+					continue
+				}
+				results = append(results, ips...)
+			} else {
+				// The range is larger than a /24. Iterate through all /24 subnets within it.
+				subnetSize := ipRangeSize(netip.PrefixFrom(originalPrefix.Addr(), subnetBits))
+				current := originalPrefix.Addr()
+				for originalPrefix.Contains(current) {
+					subnet := netip.PrefixFrom(current, subnetBits)
+					subnetRange := ipRange{start: subnet.Addr(), size: ipRangeSize(subnet)}
+					ips, err := g.generateIPsFromRange(subnetRange, ipsPerSubnet)
+					if err != nil {
+						break
+					}
+					results = append(results, ips...)
+
+					// Move to the next /24 subnet
+					nextAddr := addIP(current, subnetSize)
+					if !nextAddr.IsValid() || nextAddr.Compare(current) <= 0 { // Overflow check
+						break
+					}
+					current = nextAddr
+				}
+			}
+		} else { // IPv6
+			subnetBits := 120              // Use /120 as the equivalent of IPv4's /24 (256 addresses)
+			const sampleSubnetsCount = 100 // Number of random subnets to sample from a large range
+
+			if originalPrefix.Bits() >= subnetBits {
+				// Range is a /120 or smaller, scan it directly.
+				ips, err := g.generateIPsFromRange(r, ipsPerSubnet)
+				if err != nil {
+					continue
+				}
+				results = append(results, ips...)
+			} else {
+				// The range is larger than a /120. Iterating all is infeasible.
+				// Instead, we randomly sample a fixed number of /120 subnets.
+				randomBits := subnetBits - originalPrefix.Bits()
+				numSubnets := new(big.Int).Lsh(big.NewInt(1), uint(randomBits))
+
+				for i := 0; i < sampleSubnetsCount; i++ {
+					// Get a random index for a subnet within the larger range.
+					randomIndex, err := rand.Int(rand.Reader, numSubnets)
+					if err != nil {
+						continue
+					}
+
+					// Calculate the offset to find the start of the random subnet.
+					hostBits := 128 - subnetBits // 8 bits for /120
+					subnetOffset := new(big.Int).Lsh(randomIndex, uint(hostBits))
+					subnetStartAddr := addIP(originalPrefix.Addr(), subnetOffset)
+
+					// Generate IPs from this randomly sampled subnet.
+					subnetPrefix := netip.PrefixFrom(subnetStartAddr, subnetBits)
+					subnetRange := ipRange{start: subnetPrefix.Addr(), size: ipRangeSize(subnetPrefix)}
+					ips, err := g.generateIPsFromRange(subnetRange, ipsPerSubnet)
+					if err != nil {
+						continue
+					}
+					results = append(results, ips...)
+				}
+			}
+		}
+	}
+
 	if len(results) == 0 {
-		okFlag := false
-		for i := range g.ipRanges {
-			if g.ipRanges[i].index.Cmp(big.NewInt(0)) > 0 {
-				okFlag = true
-			}
-			g.ipRanges[i].index.SetInt64(0)
-		}
-		if okFlag {
-			// Reshuffle and start over
-			for i := range g.ipRanges {
-				g.ipRanges[i].lcg = NewLCG(g.ipRanges[i].size)
-			}
-			return g.NextBatch()
-		} else {
-			return nil, errors.New("no more IP addresses")
-		}
+		return nil, errors.New("no IP ranges configured or no IPs generated")
 	}
 	return results, nil
 }
@@ -218,7 +360,11 @@ func shuffleSubnetsIpRange(subnets []ipRange) error {
 }
 
 func NewIterator(opts *statute.ScannerOptions) *IpGenerator {
-	var ranges []ipRange
+	g := &IpGenerator{
+		ipRanges: make([]ipRange, 0),
+		opts:     opts,
+	}
+
 	for _, cidr := range opts.CidrList {
 		if !opts.UseIPv6 && cidr.Addr().Is6() {
 			continue
@@ -229,19 +375,19 @@ func NewIterator(opts *statute.ScannerOptions) *IpGenerator {
 
 		ipRange, err := newIPRange(cidr)
 		if err != nil {
-			// TODO
+			opts.Logger.Warn("failed to create IP range from CIDR", "cidr", cidr.String(), "error", err)
 			continue
 		}
-		ranges = append(ranges, ipRange)
+		g.ipRanges = append(g.ipRanges, ipRange)
 	}
-	if len(ranges) == 0 {
-		// TODO
-		return nil
+
+	if len(g.ipRanges) > 1 {
+		err := shuffleSubnetsIpRange(g.ipRanges)
+		if err != nil {
+			// Log the error but don't fail; proceed with unshuffled ranges.
+			opts.Logger.Error("failed to shuffle IP ranges", "error", err)
+		}
 	}
-	err := shuffleSubnetsIpRange(ranges)
-	if err != nil {
-		// TODO
-		return nil
-	}
-	return &IpGenerator{ipRanges: ranges}
+
+	return g
 }

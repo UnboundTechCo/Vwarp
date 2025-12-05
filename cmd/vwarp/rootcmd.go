@@ -24,24 +24,27 @@ type rootConfig struct {
 	flags   *ff.FlagSet
 	command *ff.Command
 
-	verbose  bool
-	v4       bool
-	v6       bool
-	bind     string
-	endpoint string
-	key      string
-	dns      string
-	gool     bool
-	psiphon  bool
-	country  string
-	scan     bool
-	rtt      time.Duration
-	cacheDir string
-	fwmark   uint32
-	reserved string
-	wgConf   string
-	testUrl  string
-	config   string
+	verbose            bool
+	v4                 bool
+	v6                 bool
+	bind               string
+	endpoint           string
+	key                string
+	dns                string
+	gool               bool
+	psiphon            bool
+	masque             bool
+	masqueAutoFallback bool
+	masquePreferred    bool
+	country            string
+	scan               bool
+	rtt                time.Duration
+	cacheDir           string
+	fwmark             uint32
+	reserved           string
+	wgConf             string
+	testUrl            string
+	config             string
 
 	// AtomicNoize WireGuard configuration
 	AtomicNoizeEnable         bool
@@ -62,6 +65,11 @@ type rootConfig struct {
 	AtomicNoizeAllowZeroSize  bool
 	AtomicNoizeHandshakeDelay time.Duration
 
+	// MASQUE Noize configuration
+	masqueNoize       bool
+	masqueNoizePreset string
+	masqueNoizeConfig string // Path to custom noize config JSON file
+
 	// SOCKS proxy configuration
 	proxyAddress string
 }
@@ -78,8 +86,9 @@ func newRootCmd() *rootConfig {
 	})
 	cfg.flags.AddFlag(ff.FlagConfig{
 		ShortName: '4',
+		LongName:  "ipv4",
 		Value:     ffval.NewValueDefault(&cfg.v4, false),
-		Usage:     "only use IPv4 for random warp endpoint",
+		Usage:     "only use IPv4 for random warp/MASQUE endpoint",
 	})
 	cfg.flags.AddFlag(ff.FlagConfig{
 		ShortName: '6',
@@ -113,6 +122,36 @@ func newRootCmd() *rootConfig {
 		LongName: "gool",
 		Value:    ffval.NewValueDefault(&cfg.gool, false),
 		Usage:    "enable gool mode (warp in warp)",
+	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "masque",
+		Value:    ffval.NewValueDefault(&cfg.masque, false),
+		Usage:    "enable MASQUE mode (connect to warp via MASQUE proxy)",
+	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "masque-auto-fallback",
+		Value:    ffval.NewValueDefault(&cfg.masqueAutoFallback, false),
+		Usage:    "automatically fallback to WireGuard if MASQUE fails",
+	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "masque-preferred",
+		Value:    ffval.NewValueDefault(&cfg.masquePreferred, false),
+		Usage:    "prefer MASQUE over WireGuard (with automatic fallback)",
+	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "masque-noize",
+		Value:    ffval.NewValueDefault(&cfg.masqueNoize, false),
+		Usage:    "enable MASQUE QUIC obfuscation (helps bypass DPI/censorship)",
+	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "masque-noize-preset",
+		Value:    ffval.NewValueDefault(&cfg.masqueNoizePreset, "medium"),
+		Usage:    "MASQUE noize preset: light, medium, heavy, stealth, gfw, firewall (default: medium)",
+	})
+	cfg.flags.AddFlag(ff.FlagConfig{
+		LongName: "masque-noize-config",
+		Value:    ffval.NewValueDefault(&cfg.masqueNoizeConfig, ""),
+		Usage:    "path to custom MASQUE noize configuration JSON file (overrides preset)",
 	})
 	cfg.flags.AddFlag(ff.FlagConfig{
 		LongName: "cfon",
@@ -268,6 +307,36 @@ func (c *rootConfig) exec(ctx context.Context, args []string) error {
 		fatal(l, errors.New("can't use cfon and gool at the same time"))
 	}
 
+	if c.masque && c.gool {
+		fatal(l, errors.New("can't use masque and gool at the same time"))
+	}
+
+	if c.masque && c.psiphon {
+		fatal(l, errors.New("can't use masque and cfon at the same time"))
+	}
+
+	if c.masque && c.masquePreferred {
+		fatal(l, errors.New("can't use masque and masque-preferred at the same time"))
+	}
+
+	if c.masqueAutoFallback && !c.masque {
+		fatal(l, errors.New("masque-auto-fallback requires masque mode to be enabled"))
+	}
+
+	if c.masquePreferred && c.gool {
+		fatal(l, errors.New("can't use masque-preferred and gool at the same time"))
+	}
+
+	if c.masquePreferred && c.psiphon {
+		fatal(l, errors.New("can't use masque-preferred and cfon at the same time"))
+	}
+
+	if c.masque && c.endpoint == "" {
+		// If no endpoint is provided in MASQUE mode, scan for one
+		l.Info("no endpoint specified, scanning for endpoints...")
+		c.scan = true
+	}
+
 	if c.v4 && c.v6 {
 		fatal(l, errors.New("can't force v4 and v6 at the same time"))
 	}
@@ -287,17 +356,23 @@ func (c *rootConfig) exec(ctx context.Context, args []string) error {
 	}
 
 	opts := app.WarpOptions{
-		Bind:              bindAddrPort,
-		Endpoint:          c.endpoint,
-		License:           c.key,
-		DnsAddr:           dnsAddr,
-		Gool:              c.gool,
-		FwMark:            c.fwmark,
-		WireguardConfig:   c.wgConf,
-		Reserved:          c.reserved,
-		TestURL:           c.testUrl,
-		AtomicNoizeConfig: c.buildAtomicNoizeConfig(),
-		ProxyAddress:      c.proxyAddress,
+		Bind:               bindAddrPort,
+		Endpoint:           c.endpoint,
+		License:            c.key,
+		DnsAddr:            dnsAddr,
+		Gool:               c.gool,
+		Masque:             c.masque,
+		MasqueAutoFallback: c.masqueAutoFallback,
+		MasquePreferred:    c.masquePreferred,
+		MasqueNoize:        c.masqueNoize,
+		MasqueNoizePreset:  c.masqueNoizePreset,
+		MasqueNoizeConfig:  c.masqueNoizeConfig,
+		FwMark:             c.fwmark,
+		WireguardConfig:    c.wgConf,
+		Reserved:           c.reserved,
+		TestURL:            c.testUrl,
+		AtomicNoizeConfig:  c.buildAtomicNoizeConfig(),
+		ProxyAddress:       c.proxyAddress,
 	}
 
 	switch {
@@ -321,9 +396,15 @@ func (c *rootConfig) exec(ctx context.Context, args []string) error {
 		opts.Scan = &wiresocks.ScanOptions{V4: c.v4, V6: c.v6, MaxRTT: c.rtt}
 	}
 
-	// If the endpoint is not set, choose a random warp endpoint
+	// If the endpoint is not set, choose a random endpoint
 	if opts.Endpoint == "" {
-		addrPort, err := warp.RandomWarpEndpoint(c.v4, c.v6)
+		var addrPort netip.AddrPort
+		var err error
+
+		// Use WireGuard endpoints for both WARP and MASQUE scanning
+		// MASQUE will convert port 2408 -> 443 in runWarpWithMasque
+		addrPort, err = warp.RandomWarpEndpoint(c.v4, c.v6)
+
 		if err != nil {
 			fatal(l, err)
 		}

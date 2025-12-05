@@ -100,6 +100,11 @@ func WarpPorts() []uint16 {
 	}
 }
 
+// GetWarpPorts is an alias for WarpPorts for compatibility
+func GetWarpPorts() []uint16 {
+	return WarpPorts()
+}
+
 func RandomWarpPort() uint16 {
 	ports := WarpPorts()
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))

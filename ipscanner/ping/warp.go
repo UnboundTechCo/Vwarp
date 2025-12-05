@@ -8,13 +8,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/bepass-org/vwarp/ipscanner/statute"
 	"math/big"
 	"net"
 	"net/netip"
 	"time"
 
-	"github.com/bepass-org/vwarp/ipscanner/statute"
-	"github.com/bepass-org/vwarp/warp"
 	"github.com/flynn/noise"
 	"golang.org/x/crypto/blake2s"
 	"golang.org/x/crypto/curve25519"
@@ -47,6 +46,8 @@ type WarpPing struct {
 	PeerPublicKey string
 	PresharedKey  string
 	IP            netip.Addr
+
+	opts statute.ScannerOptions
 }
 
 func (h *WarpPing) Ping() statute.IPingResult {
@@ -54,7 +55,14 @@ func (h *WarpPing) Ping() statute.IPingResult {
 }
 
 func (h *WarpPing) PingContext(ctx context.Context) statute.IPingResult {
-	addr := netip.AddrPortFrom(h.IP, warp.RandomWarpPort())
+	port := h.opts.Port
+	// If the port is 0, it's a signal to pick a random valid WARP port.
+	// This is used for scanning CIDR ranges.
+	if port == 0 {
+		port = h.opts.GetRandomWarpPort()
+	}
+
+	addr := netip.AddrPortFrom(h.IP, port)
 	rtt, err := initiateHandshake(
 		ctx,
 		addr,
@@ -212,7 +220,7 @@ func initiateHandshake(ctx context.Context, serverAddr netip.AddrPort, privateKe
 	}
 	defer conn.Close()
 
-	numPackets := randomInt(20, 50)
+	numPackets := randomInt(8, 15)
 	randomPacket := make([]byte, 100)
 	for i := uint64(0); i < numPackets; i++ {
 		select {
@@ -230,7 +238,7 @@ func initiateHandshake(ctx context.Context, serverAddr netip.AddrPort, privateKe
 				return 0, fmt.Errorf("error sending random packet: %w", err)
 			}
 
-			time.Sleep(time.Duration(randomInt(80, 150)) * time.Millisecond)
+			time.Sleep(time.Duration(randomInt(20, 250)) * time.Millisecond)
 		}
 	}
 
@@ -285,6 +293,8 @@ func NewWarpPing(ip netip.Addr, opts *statute.ScannerOptions) *WarpPing {
 		PeerPublicKey: opts.WarpPeerPublicKey,
 		PresharedKey:  opts.WarpPresharedKey,
 		IP:            ip,
+
+		opts: *opts,
 	}
 }
 
