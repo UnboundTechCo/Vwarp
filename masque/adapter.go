@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -89,11 +90,12 @@ func NewMasqueAdapter(ctx context.Context, cfg AdapterConfig) (*MasqueAdapter, e
 	var usqueConfig *config.Config
 	configExists := false
 	if _, err := os.Stat(cfg.ConfigPath); err == nil {
-		// Config file exists, try to load it
 		cfg.Logger.Info("Loading existing MASQUE config", "path", cfg.ConfigPath)
 		if err := config.LoadConfig(cfg.ConfigPath); err != nil {
-			cfg.Logger.Warn("Failed to load existing config, will re-register", "error", err)
-			// Remove corrupted config file
+			cfg.Logger.Warn("Failed to load config, will re-register", "error", err)
+			os.Remove(cfg.ConfigPath)
+		} else if config.AppConfig.PrivateKey == "" || config.AppConfig.EndpointV4 == "" || config.AppConfig.ID == "" {
+			cfg.Logger.Warn("Config is incomplete, will re-register")
 			os.Remove(cfg.ConfigPath)
 		} else {
 			configExists = true
@@ -130,10 +132,15 @@ func NewMasqueAdapter(ctx context.Context, cfg AdapterConfig) (*MasqueAdapter, e
 			return nil, fmt.Errorf("failed to enroll key: %w", err)
 		}
 
+		// Validate registration data
+		if len(updatedAccountData.Config.Peers) == 0 || updatedAccountData.Config.Peers[0].Endpoint.V4 == "" || 
+		   updatedAccountData.Config.Peers[0].PublicKey == "" || updatedAccountData.ID == "" {
+			return nil, fmt.Errorf("registration failed: incomplete data returned")
+		}
+
 		// Create config
 		usqueConfig = &config.Config{
-			PrivateKey: base64.StdEncoding.EncodeToString(privKey),
-			// Strip port suffix from endpoints
+			PrivateKey:     base64.StdEncoding.EncodeToString(privKey),
 			EndpointV4:     stripPortSuffix(updatedAccountData.Config.Peers[0].Endpoint.V4),
 			EndpointV6:     stripPortSuffix(updatedAccountData.Config.Peers[0].Endpoint.V6),
 			EndpointPubKey: updatedAccountData.Config.Peers[0].PublicKey,
@@ -149,9 +156,15 @@ func NewMasqueAdapter(ctx context.Context, cfg AdapterConfig) (*MasqueAdapter, e
 			usqueConfig.License = cfg.License
 		}
 
-		// Save config
-		if err := usqueConfig.SaveConfig(cfg.ConfigPath); err != nil {
+		// Save config with robust error handling
+		if err := saveConfigFile(cfg.ConfigPath, usqueConfig); err != nil {
 			return nil, fmt.Errorf("failed to save config: %w", err)
+		}
+
+		// Verify config was saved correctly
+		if err := config.LoadConfig(cfg.ConfigPath); err != nil || 
+		   config.AppConfig.PrivateKey == "" || config.AppConfig.ID == "" {
+			return nil, fmt.Errorf("failed to verify saved config")
 		}
 
 		cfg.Logger.Info("MASQUE device registered successfully",
@@ -161,22 +174,16 @@ func NewMasqueAdapter(ctx context.Context, cfg AdapterConfig) (*MasqueAdapter, e
 		)
 	}
 
-	// Determine endpoint - ALWAYS prioritize cfg.Endpoint if provided
-	cfg.Logger.Debug("Endpoint determination", "cfg.Endpoint", cfg.Endpoint, "config.EndpointV4", usqueConfig.EndpointV4, "config.EndpointV6", usqueConfig.EndpointV6)
-
+	// Determine endpoint
 	var endpointAddr string
 	if cfg.Endpoint != "" {
-		// Use the provided endpoint (from scan or user input)
 		endpointAddr = cfg.Endpoint
-		cfg.Logger.Debug("Using provided endpoint", "endpoint", endpointAddr)
 	} else {
-		// Fall back to config file endpoint only if none provided
 		if cfg.UseIPv6 {
 			endpointAddr = usqueConfig.EndpointV6
 		} else {
 			endpointAddr = usqueConfig.EndpointV4
 		}
-		cfg.Logger.Debug("Using config file endpoint", "endpoint", endpointAddr, "ipv6", cfg.UseIPv6)
 	}
 
 	// Add port if not specified
@@ -470,4 +477,21 @@ func generateEcKeyPair() ([]byte, []byte, error) {
 	}
 
 	return privKeyDER, pubKeyDER, nil
+}
+
+// saveConfigFile saves config to file with atomic write for robustness
+func saveConfigFile(configPath string, cfg *config.Config) error {
+	file, err := os.Create(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to create config file: %w", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(cfg); err != nil {
+		return fmt.Errorf("failed to encode config: %w", err)
+	}
+
+	return nil
 }
