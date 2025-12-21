@@ -12,14 +12,14 @@ import (
 	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/peterbourgon/ff/v4"
+	"github.com/peterbourgon/ff/v4/ffval"
 	"github.com/voidr3aper-anon/Vwarp/app"
 	"github.com/voidr3aper-anon/Vwarp/config"
 	"github.com/voidr3aper-anon/Vwarp/config/noize"
 	p "github.com/voidr3aper-anon/Vwarp/psiphon"
 	"github.com/voidr3aper-anon/Vwarp/warp"
 	"github.com/voidr3aper-anon/Vwarp/wiresocks"
-	"github.com/peterbourgon/ff/v4"
-	"github.com/peterbourgon/ff/v4/ffval"
 )
 
 type rootConfig struct {
