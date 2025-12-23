@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/bepass-org/vwarp/proxy/pkg/http"
-	"github.com/bepass-org/vwarp/proxy/pkg/socks4"
-	"github.com/bepass-org/vwarp/proxy/pkg/socks5"
-	"github.com/bepass-org/vwarp/proxy/pkg/statute"
+	"github.com/voidr3aper-anon/Vwarp/proxy/pkg/http"
+	"github.com/voidr3aper-anon/Vwarp/proxy/pkg/socks4"
+	"github.com/voidr3aper-anon/Vwarp/proxy/pkg/socks5"
+	"github.com/voidr3aper-anon/Vwarp/proxy/pkg/statute"
 )
 
 type userHandler func(request *statute.ProxyRequest) error
@@ -82,7 +82,8 @@ func (c *SwitchConn) Read(p []byte) (n int, err error) {
 func (p *Proxy) ListenAndServe() error {
 	// Create a new listener
 	if p.listener == nil {
-		ln, err := net.Listen("tcp", p.bind)
+		var lc net.ListenConfig
+		ln, err := lc.Listen(p.ctx, "tcp", p.bind)
 		if err != nil {
 			return err // Return error if binding was unsuccessful
 		}
@@ -91,20 +92,11 @@ func (p *Proxy) ListenAndServe() error {
 
 	p.bind = p.listener.Addr().(*net.TCPAddr).String()
 
-	// ensure listener will be closed
-	defer func() {
-		_ = p.listener.Close()
-	}()
-
-	// Create a cancelable context based on p.Context
-	ctx, cancel := context.WithCancel(p.ctx)
-	defer cancel() // Ensure resources are cleaned up
-
 	// Start to accept connections and serve them
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-p.ctx.Done():
+			return nil
 		default:
 			conn, err := p.listener.Accept()
 			if err != nil {
