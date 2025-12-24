@@ -25,7 +25,7 @@ func usermodeTunTest(ctx context.Context, l *slog.Logger, tnet *netstack.Net, ur
 	// Wait a bit after handshake to ensure connection is stable
 	select {
 	case <-ctx.Done():
-		return errors.New("context canceled")
+		return ctx.Err()
 	case <-time.After(2 * time.Second):
 	}
 
