@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -25,7 +24,7 @@ func usermodeTunTest(ctx context.Context, l *slog.Logger, tnet *netstack.Net, ur
 	// Wait a bit after handshake to ensure connection is stable
 	select {
 	case <-ctx.Done():
-		return errors.New("context canceled")
+		return ctx.Err()
 	case <-time.After(2 * time.Second):
 	}
 
@@ -283,7 +282,7 @@ func establishWireguard(ctx context.Context, l *slog.Logger, conf *wiresocks.Con
 	}()
 	select {
 	case <-ctx.Done():
-		return errors.New("context canceled")
+		return ctx.Err()
 	case err := <-IpcSetCh:
 		if err != nil {
 			return err

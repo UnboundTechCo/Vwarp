@@ -622,7 +622,7 @@ func runWarpWithMasque(ctx context.Context, l *slog.Logger, opts WarpOptions, en
 			l.Info("Retrying MASQUE adapter creation", "delay", retryDelay)
 			select {
 			case <-ctx.Done():
-				return errors.New("context canceled")
+				return ctx.Err()
 			case <-time.After(retryDelay):
 			}
 		}
