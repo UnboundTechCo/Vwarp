@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -283,7 +282,7 @@ func establishWireguard(ctx context.Context, l *slog.Logger, conf *wiresocks.Con
 	}()
 	select {
 	case <-ctx.Done():
-		return errors.New("context canceled")
+		return ctx.Err()
 	case err := <-IpcSetCh:
 		if err != nil {
 			return err
